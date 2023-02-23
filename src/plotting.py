@@ -1,5 +1,4 @@
 import random
-
 import matplotlib
 import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
@@ -8,24 +7,43 @@ import matplotlib.ticker
 import numpy as np
 
 # import us_cmap
-
+# import custom colormap from us_cmap module
 from . import us_cmap
 
 def above_legend_args(ax):
+    """
+    Returns a dictionary of arguments to place a legend above the plot.
+    :param ax: Matplotlib axes object
+    :return: Dictionary of legend arguments
+    """
     return dict(loc='lower center', bbox_to_anchor=(0.5, 1.0), bbox_transform=ax.transAxes, borderaxespad=0.25)
 
 
 def add_single_row_legend(ax: matplotlib.pyplot.Axes, title: str, **legend_args):
+    """
+    Adds a single-row legend to a plot.
+    :param ax: Matplotlib axes object
+    :param title: Title of the legend
+    :param **legend_args: Additional arguments to be passed to the legend function
+    """
     # Extracting handles and labels
     try:
         h, l = legend_args.pop('legs')
     except KeyError:
         h, l = ax.get_legend_handles_labels()
+    
+    # Adding placeholder for title
     ph = mlines.Line2D([], [], color='white')
     handles = [ph] + h
     labels = [title] + l
+    
+    # Setting number of columns in legend to match number of handles
     legend_args['ncol'] = legend_args.get('ncol', len(handles))
+    
+    # Creating legend
     leg = ax.legend(handles, labels, **legend_args)
+    
+    # Adjusting width of legend items
     for vpack in leg._legend_handle_box.get_children()[:1]:
         for hpack in vpack.get_children()[:1]:
             hpack.get_children()[0].set_width(-30)
@@ -33,11 +51,10 @@ def add_single_row_legend(ax: matplotlib.pyplot.Axes, title: str, **legend_args)
 
 def filter_duplicate_handles(ax):
     """
-    usage:  ax.legend(*filter_duplicate_handles(ax), kwargs...)
-    :param ax:
-    :return:
+    Filters duplicate handles and labels from a plot's legend.
+    :param ax: Matplotlib axes object
+    :return: Tuple of filtered handles and labels
     """
-
     handles, labels = ax.get_legend_handles_labels()
     unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
     return zip(*unique)
@@ -45,19 +62,25 @@ def filter_duplicate_handles(ax):
 
 class MaxTickSciFormatter(matplotlib.ticker.Formatter):
     """
-    Only formats ticks that are above a given maximum. Useful for log plots, where the last tick label is not shown.
-    Usage: ax.yaxis.set_minor_formatter(MaxTickSciFormatter(last_tick_value))
+    Formatter for log plots that only formats ticks above a certain value.
     """
 
     def __init__(self, last_tick_value):
         """
-        :param last_tick_value: format all labels with an x/y value equal or above this value
+        Initializes MaxTickSciFormatter.
+        :param last_tick_value: Format all labels with an x/y value equal or above this value.
         """
         super().__init__()
         self.last_tick_value = last_tick_value
         self._sci_formatter = matplotlib.ticker.LogFormatterSciNotation()
 
     def __call__(self, x, pos=None):
+        """
+        Formats tick labels.
+        :param x: Tick value
+        :param pos: Tick position (unused)
+        :return: Formatted tick label
+        """
         if x >= self.last_tick_value:
             return self._sci_formatter(x, pos)
         else:
@@ -65,7 +88,12 @@ class MaxTickSciFormatter(matplotlib.ticker.Formatter):
 
 
 def get_dimensions(height=140, num_cols=1):
-    # \showthe\columnwidth
+    """
+    Calculates the dimensions (in inches) of a plot given its height and number of columns.
+    :param height: Height of the plot in points (default 140)
+    :param num_cols: Number of columns in the plot (default 1)
+    :return: Tuple of width and height in inches
+    """
     single_col_pts = 252
     double_col_pts = 516
     inches_per_pt = 1 / 72.27
@@ -82,7 +110,10 @@ def get_dimensions(height=140, num_cols=1):
 
 
 def prepare_matplotlib():
+    # Activate the custom US colormap
     us_cmap.activate()
+
+    # Set various parameters for the matplotlib module
     params = {
         'savefig.pad_inches': 0.0,
         'savefig.bbox': 'tight',
@@ -104,13 +135,20 @@ def prepare_matplotlib():
         'legend.frameon': False,
         'legend.borderpad': 0
     }
+
+    # Update the matplotlib settings with the specified parameters
     matplotlib.rcParams.update(params)
 
 
 def prepare_for_latex(preamble=''):
+    # If the siunitx package is not in the preamble, add it
     if 'siunitx' not in preamble:
         preamble += '\n' + r'\usepackage{siunitx}'
+
+    # Set various parameters for the matplotlib module
     prepare_matplotlib()
+
+    # Set various parameters for the pgf module (for use with LaTeX)
     params = {
         'backend': 'pgf',
         'text.usetex': True,
@@ -120,13 +158,7 @@ def prepare_for_latex(preamble=''):
         'pgf.preamble': preamble,
         'axes.unicode_minus': False,
     }
+
+    # Update the matplotlib settings with the specified parameters
     matplotlib.rcParams.update(params)
 
-
-# \documentclass{article}
-# \usepackage{layouts}
-# \begin{document}
-# \begin{figure*}
-#   \currentpage\pagedesign
-# \end{figure*}
-# \end{document}
